@@ -69,9 +69,16 @@ func (h *listCharactersHandler) list(w http.ResponseWriter, r *http.Request) {
 		return characterFiles[i].LastModified.After(characterFiles[j].LastModified)
 	})
 
+	// Limit to 8 most recent characters
+	maxChars := 8
+	if len(characterFiles) < maxChars {
+		maxChars = len(characterFiles)
+	}
+        limitedCharacters := characterFiles[:maxChars]
+
 	h.encoder.Response(w, struct {
 		Characters []CharacterFileInfo `json:"characters"`
 	}{
-		Characters: characterFiles,
+		Characters: limitedCharacters,
 	})
 }
