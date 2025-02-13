@@ -35,8 +35,10 @@ func (h *listCharactersHandler) Routes(router chi.Router) {
 }
 
 func (h *listCharactersHandler) list(w http.ResponseWriter, r *http.Request) {
+    var d2sPath            = env.String("D2S_PATH", "")
+
     // Read directory entries
-    files, err := os.ReadDir(h.d2sPath)
+    files, err := os.ReadDir(d2sPath)
     if err != nil {
         h.encoder.Error(w, fmt.Errorf("failed to read directory: %v", err))
         return
@@ -47,7 +49,7 @@ func (h *listCharactersHandler) list(w http.ResponseWriter, r *http.Request) {
     for _, file := range files {
         // Skip directories and only process character files (no extension needed)
         if !file.IsDir() {
-            fullPath := filepath.Join(h.d2sPath, file.Name())
+            fullPath := filepath.Join(d2sPath, file.Name())
 
             // Get full file info including modification time
             fileInfo, err := os.Stat(fullPath)
