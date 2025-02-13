@@ -87,3 +87,5 @@ atlassian-ide-plugin.xml
 # End of https://www.gitignore.io/api/g,go,intellij
 docker/data
 bin/
+
+armory
