@@ -73,10 +73,10 @@ func (s *Server) Handler() http.Handler {
 	// Deprecated handler, supported for consumers who rely on it.
 	r.Route("/retrieving/v1/character", newCharacterHandler(s.encoder, s.characterService).Routes)
 
-        // new functionality not used at SlashDiablo
-        // TODO: submit it upstream ;)
-        // TODO: make it conditional for upstream ...?
-        r.Route("/list-characters", newListCharactersHandler().Routes)
+	// new functionality not used at SlashDiablo
+	// TODO: submit it upstream ;)
+	// TODO: make it conditional for upstream ...?
+	r.Route("/list-characters", newListCharactersHandler().Routes)
 
 	return r
 }
