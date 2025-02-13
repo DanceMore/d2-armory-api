@@ -76,7 +76,7 @@ func (s *Server) Handler() http.Handler {
 	// new functionality not used at SlashDiablo
 	// TODO: submit it upstream ;)
 	// TODO: make it conditional for upstream ...?
-	r.Route("/list-characters", newListCharactersHandler().Routes)
+	r.Route("/api/v2/list-characters", newListCharactersHandler().Routes)
 
 	return r
 }
