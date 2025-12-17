@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/nokka/d2-armory-api/internal/domain"
+	"github.com/nokka/d2-armory-api/internal/metrics"
 )
 
 //go:generate moq -out ./service_mocks.go . parser characterRepository
@@ -39,6 +40,7 @@ const nameRegexp = "^[a-zA-Z]+[_-]?[a-zA-Z]+$"
 func (s Service) Parse(ctx context.Context, name string) (*domain.Character, error) {
 	match, _ := regexp.MatchString(nameRegexp, name)
 	if !match {
+		metrics.CharacterParsesTotal.WithLabelValues(name, "invalid_name").Inc()
 		return nil, domain.ErrInvalidArgument
 	}
 
@@ -49,17 +51,23 @@ func (s Service) Parse(ctx context.Context, name string) (*domain.Character, err
 			// Character didn't exist at all, so lets parse and store it.
 			parsed, err := s.parser.Parse(name)
 			if err != nil {
+				metrics.CharacterParsesTotal.WithLabelValues(name, "parse_error").Inc()
 				return nil, err
 			}
 
 			if err := s.characters.Store(ctx, parsed); err != nil {
+				metrics.CharacterParsesTotal.WithLabelValues(name, "store_error").Inc()
 				return nil, err
 			}
 
+			// Update metrics on successful parse
+			metrics.UpdateCharacterMetrics(parsed)
+			metrics.CharacterParsesTotal.WithLabelValues(name, "success").Inc()
 			return parsed, nil
 		}
 
 		// The error wasn't ErrNotFound, so just return it.
+		metrics.CharacterParsesTotal.WithLabelValues(name, "db_error").Inc()
 		return nil, err
 	}
 
@@ -69,19 +77,27 @@ func (s Service) Parse(ctx context.Context, name string) (*domain.Character, err
 	if diff >= s.cacheDuration {
 		parsed, err := s.parser.Parse(name)
 		if err != nil {
+			metrics.CharacterParsesTotal.WithLabelValues(name, "parse_error").Inc()
 			return nil, err
 		}
 
 		// Update the existing record in the db.
 		err = s.characters.Update(ctx, parsed)
 		if err != nil {
+			metrics.CharacterParsesTotal.WithLabelValues(name, "update_error").Inc()
 			return nil, err
 		}
 
+		// Update metrics on successful parse
+		metrics.UpdateCharacterMetrics(parsed)
+		metrics.CharacterParsesTotal.WithLabelValues(name, "success").Inc()
 		return parsed, nil
 	}
 
-	// We parsed this character less than 3 minutes ago so return the db version.
+	// We parsed this character less than cacheDuration ago so return the db version
+	// Still update metrics from cached data
+	metrics.UpdateCharacterMetrics(c)
+	metrics.CharacterParsesTotal.WithLabelValues(name, "cached").Inc()
 	return c, nil
 }
 
