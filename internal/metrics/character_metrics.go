@@ -85,7 +85,7 @@ var (
 			Name: "d2_character_item_count",
 			Help: "Number of items by location",
 		},
-		[]string{"character", "location"}, // location: "equipped", "inventory", "corpse", "merc"
+		[]string{"character", "location"}, // location: "inventory", "corpse", "merc"
 	)
 
 	CharacterParsesTotal = promauto.NewCounterVec(
@@ -125,10 +125,8 @@ func UpdateCharacterMetrics(char *domain.Character) {
 	
 	// Check hardcore status from the status field
 	isHardcore := "false"
-	statusStr := d2sChar.Header.Status.Readable()
-	// The Readable() method returns a struct with fields, check if it has Hardcore info
-	// For now, we'll leave it as false unless we can determine it
-	// TODO: Check statusStr for hardcore flag
+	// TODO: Check d2sChar.Header.Status for hardcore flag
+	// The Status type might have a method or field to check this
 
 	// Basic character info
 	CharacterLevel.WithLabelValues(charName, className, isHardcore).Set(float64(d2sChar.Header.Level))
@@ -166,25 +164,16 @@ func UpdateCharacterMetrics(char *domain.Character) {
 
 func updateItemMetrics(charName string, d2sChar *d2s.Character) {
 	socketedCount := 0
-	equippedCount := 0
-	inventoryCount := 0
 
-	// Count equipped vs inventory items
+	// Count socketed items in main inventory
 	for _, item := range d2sChar.Items {
-		if item.Equipped {
-			equippedCount++
-		} else {
-			inventoryCount++
-		}
-
 		if item.NrOfItemsInSockets > 0 {
 			socketedCount++
 		}
 	}
 
 	CharacterSocketedItemCount.WithLabelValues(charName).Set(float64(socketedCount))
-	CharacterItemCount.WithLabelValues(charName, "equipped").Set(float64(equippedCount))
-	CharacterItemCount.WithLabelValues(charName, "inventory").Set(float64(inventoryCount))
+	CharacterItemCount.WithLabelValues(charName, "inventory").Set(float64(len(d2sChar.Items)))
 	CharacterItemCount.WithLabelValues(charName, "corpse").Set(float64(len(d2sChar.CorpseItems)))
 	CharacterItemCount.WithLabelValues(charName, "merc").Set(float64(len(d2sChar.MercItems)))
 }
