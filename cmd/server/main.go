@@ -34,6 +34,7 @@ func main() {
 		statisticsPassword = env.String("STATISTICS_PASSWORD", "")
 		corsEnabled        = env.String("CORS_ENABLED", "false")
 		logRequests        = env.String("LOG_REQUESTS", "false")
+		metricsInterval    = env.String("METRICS_INTERVAL", "5m")
 	)
 
 	if d2sPath == "" {
@@ -54,6 +55,12 @@ func main() {
 	cd, err := time.ParseDuration(cacheDuration)
 	if err != nil {
 		log.Printf("failed to parse cache duration, %s", err)
+		os.Exit(0)
+	}
+
+	mi, err := time.ParseDuration(metricsInterval)
+	if err != nil {
+		log.Printf("failed to parse metrics interval, %s", err)
 		os.Exit(0)
 	}
 
@@ -115,6 +122,18 @@ func main() {
 	// Channel to receive errors on.
 	errorChannel := make(chan error)
 
+	go func() {
+		log.Printf("starting metrics updater with interval %s", mi)
+			ticker := time.NewTicker(mi)
+			defer ticker.Stop()
+
+			for range ticker.C {
+				if err := updateAllCharacterMetrics(context.Background(), d2sPath, characterService); err != nil {
+					log.Printf("error updating metrics: %v", err)
+				}
+			}
+	}()
+
 	// Credentials for posting statistics map.
 	credentials := map[string]string{
 		statisticsUser: statisticsPassword,
@@ -143,4 +162,29 @@ func main() {
 	if err := <-errorChannel; err != nil {
 		os.Exit(1)
 	}
+}
+
+// updateAllCharacterMetrics reads all character files and updates metrics
+func updateAllCharacterMetrics(ctx context.Context, d2sPath string, characterService *character.Service) error {
+	files, err := os.ReadDir(d2sPath)
+	if err != nil {
+		return fmt.Errorf("failed to read d2s directory: %w", err)
+	}
+
+	for _, file := range files {
+		if file.IsDir() {
+			continue
+		}
+
+		// Parse each character file
+		charName := file.Name()
+		_, err := characterService.Parse(ctx, charName)
+		if err != nil {
+			log.Printf("failed to parse character %s for metrics: %v", charName, err)
+			continue
+		}
+	}
+
+	log.Printf("updated metrics for %d characters", len(files))
+	return nil
 }
