@@ -1,8 +1,10 @@
 package metrics
 
 import (
-    "github.com/prometheus/client_golang/prometheus"
-    "github.com/prometheus/client_golang/prometheus/promauto"
+	"github.com/nokka/d2-armory-api/internal/domain"
+	"github.com/nokka/d2s"
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promauto"
 )
 
 var (
