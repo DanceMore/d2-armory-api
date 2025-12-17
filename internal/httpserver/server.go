@@ -9,6 +9,8 @@ import (
 	"github.com/go-chi/chi"
 	"github.com/go-chi/chi/middleware"
 	"github.com/go-chi/cors"
+
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
 // Server is the HTTP server listener.
@@ -77,6 +79,9 @@ func (s *Server) Handler() http.Handler {
 	// TODO: submit it upstream ;)
 	// TODO: make it conditional for upstream ...?
 	r.Route("/api/v2/list-characters", newListCharactersHandler().Routes)
+
+	// metrics!
+	r.Handle("/metrics", promhttp.Handler())
 
 	return r
 }
